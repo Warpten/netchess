@@ -28,6 +28,8 @@
         TURN = WHITE,
         HISTORY = [],
         HALF_MOVES = 0,
+        PLAYERTURN = WHITE,
+        CURRENTMOVE = { },
         MOVE_NUMBER = 1;
     
     //! Private functions
@@ -38,7 +40,7 @@
     // @desc Validates square strings
     function ValidateSquare(square) { return typeof(square) === "string" && /^[a-h][1-8]$/.test(square); }
     // @desc Validates SAN move notation strings
-    function ValidateMove(moveString) {
+    function ValidateMoveString(moveString) {
         if (typeof(moveString) !== "string")
             return false;
         
@@ -63,6 +65,8 @@
         HALF_MOVES = 0;
         MOVE_NUMBER = 1;
         TURN = WHITE;
+        PLAYERTURN = WHITE;
+        CURRENTMOVE = { };
         if (doReload || false)
             Load(START_FEN);
     }
@@ -97,6 +101,8 @@
                 ++square;
             }
         }
+        
+        DrawBoard();
     }
     
     function ValidateFEN(position) {
@@ -173,7 +179,7 @@
     function RemovePiece(square) { BOARD[SQUARES[square]] = null; }
     
     function ExecuteMove(moveString) {
-        if (!ValidateMove(moveString))
+        if (!ValidateMoveString(moveString))
             return false;
 
         var tokens = moveString.split('-'), src = '', dest = '';
@@ -228,6 +234,86 @@
         PutPiece(captured, to);
         PutPiece(original, from);
         // AnimateUndo(from, to, captured, original); // Display
+    }
+    
+    function DrawBoard()
+    {
+        var containerNode = document.getElementById(container);
+        if (container === null)
+            return Throw("Could not find the container node to draw the board.");
+
+        containerNode.appendChild(document.createElement("div"));
+        containerNode = document.querySelector("#" + container + " > div");
+        if (containerNode == null)
+            return Throw("DOM Node could not be found.");
+            
+        containerNode.id = "chessboard-container";
+        
+        // TODO: Only bind once
+        $("body").click(function(e) { HandleCellClick(e); });
+
+        for (var i = 8; i > 0; --i) {
+            var row = document.createElement("div");
+            for (var j = 0; j < 8; ++j) {
+                var cell = document.createElement("div"),
+                    piece = GetPiece("abcdefgh".charAt(j) + i);
+                cell.className = "chessboard-cell " + ((i + j) % 2 ? "odd" : "even");
+                cell.setAttribute("data-cellName", "abcdefgh".charAt(j) + i);
+                if (piece.type != EMPTY) {
+                    var imgNode = document.createElement("img");
+                    // Fixit
+                    imgNode.src = "http://chessboardjs.com/img/chesspieces/wikipedia/" + piece.color + piece.type.toUpperCase() + ".png";
+                    cell.appendChild(imgNode);
+                }
+                row.appendChild(cell);
+            }
+            containerNode.appendChild(row);
+        }
+    }
+    
+    // @desc Handles click events used to move pieces.
+    function HandleCellClick(e) {
+        var cell = null;
+        if (e.target !== undefined) {
+            cell = e.target;
+            if (cell.nodeName == "IMG")
+                cell = cell.parentNode;
+        }
+        
+        if (cell === null)
+            return Throw("Unexpected behavior on click handler.");
+    
+        var piece = GetPiece($(cell).attr("data-cellName"));
+        if ('ORIGIN' in CURRENTMOVE) {     // Picked destination cell
+            if (piece.color == PLAYERTURN) // Do not select our own figures as targets
+                return;
+                
+            if (!('coordinates' in piece)) // Targeting an empty square
+                piece.coordinates = $(cell).attr("data-cellName");
+
+            CURRENTMOVE.DESTINATION = piece;
+            $(cell).toggleClass("highlight");
+            if (ValidateCurrentMove())
+                ExecuteCurrentMove();
+        } else {                           // Picked origin cell
+            if (piece.color != PLAYERTURN) // Do not select the opponent's figures as sources
+                return;
+            CURRENTMOVE.ORIGIN = piece;
+            $(cell).toggleClass("highlight");
+        }
+        console.log(CURRENTMOVE);
+    }
+    
+    // @desc Checks if the player's move is a valid move on the current board.
+    function ValidateCurrentMove() {
+        return true;
+    }
+    
+    // @desc Executes the player's move on the board and updates all related states.
+    function ExecuteCurrentMove() {
+        
+        // Aaaand we're done
+        CURRENTMOVE = { };
     }
     
     function ASCII() {

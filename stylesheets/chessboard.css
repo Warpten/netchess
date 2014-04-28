@@ -30,6 +30,8 @@
 #chessboard-container .chessboard-cell img {
     width: 51px;
     height: 51px;
+    margin: 0 !important;
+    padding: 0 !important;
 }
 
 #chessboard-container .chessboard-cell.highlight img {
